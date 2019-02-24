@@ -1,4 +1,6 @@
 import cmd
+import ftplib
+import os
 
 from . import base
 from .. import __version__
@@ -19,6 +21,22 @@ class InteractiveShell(cmd.Cmd):
         """Creates a new FTP connection"""
         self.cnxn = ftplib.FTP(*parse(args))
 
+    def do_list(self, args):
+        """Lists directory contents"""
+        # TODO: Check valid args
+        # headnames = '\t\t\t'.join(['Name', 'Type', 'Size', 'Mod'])
+        # print(headnames)
+        list_dir(self.cnxn)
+
+    def do_pull(self, args):
+        """Downloads a file"""
+        # TODO: Will this download a directory?
+        source, destin = path_build(*parse(args))
+        with open(destin, 'wb') as destin_file:
+            self.cnxn.retrbinary(
+                'RETR {0}'.format(source), destin_file.write, 1024
+            )
+
     def do_exit(self, args):
         """Exits nicely"""
         try:
@@ -26,6 +44,17 @@ class InteractiveShell(cmd.Cmd):
         except:
             pass
         return True
+
+
+def list_dir(cnxn, path='.'):
+    """Lists contents of an FTP directory"""
+    for name, stats in cnxn.mlsd(path):
+        itype = stats['type']
+        if itype == 'dir':
+            list_dir(cnxn, '{0}/{1}'.format(path, name))
+        else:
+            print('{0}'.format('{0}/{1}'.format(path, name)))
+
 
 def path_build(source, destin=None):
     """Returns full paths to source and destination"""
